@@ -3,9 +3,10 @@ package project
 import (
 	"context"
 	"fmt"
-	"github.com/AlecAivazis/survey/v2"
 	"os"
 	"path"
+
+	"github.com/AlecAivazis/survey/v2"
 
 	"github.com/fatih/color"
 	"github.com/go-parrot/parrot/internal/base"
@@ -17,7 +18,7 @@ type Project struct {
 }
 
 // New create a project from remote repo.
-func (p *Project) New(ctx context.Context, dir string, layout string, branch string) error {
+func (p *Project) New(ctx context.Context, dir string, layout string, branch string, moduleName string) error {
 	to := path.Join(dir, p.Name)
 	if _, err := os.Stat(to); !os.IsNotExist(err) {
 		fmt.Printf("🚫 %s already exists\n", p.Name)
@@ -41,7 +42,7 @@ func (p *Project) New(ctx context.Context, dir string, layout string, branch str
 
 	fmt.Printf("🚀 Creating service %s, layout repo is %s, branch is %s, please wait a moment.\n\n", p.Name, layout, branch)
 	repo := base.NewRepo(layout, branch)
-	if err := repo.CopyTo(ctx, to, p.Name, []string{".git", ".github"}); err != nil {
+	if err := repo.CopyTo(ctx, to, moduleName, []string{".git", ".github"}); err != nil {
 		return err
 	}
 

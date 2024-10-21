@@ -20,9 +20,10 @@ var CmdNew = &cobra.Command{
 }
 
 var (
-	repoURL string
-	branch  string
-	timeout string
+	repoURL    string
+	branch     string
+	timeout    string
+	moduleName string
 )
 
 func init() {
@@ -38,6 +39,7 @@ func init() {
 	CmdNew.Flags().StringVarP(&repoURL, "repo-url", "r", repoURL, "layout repo")
 	CmdNew.Flags().StringVarP(&branch, "branch", "b", branch, "default is http server, empty is http and gRPC")
 	CmdNew.Flags().StringVarP(&timeout, "timeout", "t", timeout, "request timeout time")
+	CmdNew.Flags().StringVarP(&moduleName, "module", "m", "", "module name")
 }
 
 func run(cmd *cobra.Command, args []string) {
@@ -68,10 +70,14 @@ func run(cmd *cobra.Command, args []string) {
 		name = args[0]
 	}
 
+	if moduleName == "" {
+		moduleName = name
+	}
+
 	p := &Project{Name: name}
 	done := make(chan error, 1)
 	go func() {
-		done <- p.New(ctx, wd, repoURL, branch)
+		done <- p.New(ctx, wd, repoURL, branch, moduleName)
 	}()
 
 	select {

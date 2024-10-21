@@ -74,7 +74,7 @@ func (s *Server) Endpoint() (*url.URL, error) {
 	return s.endpoint, nil
 }
 
-// Start start a server
+// Start a server
 func (s *Server) Start(ctx context.Context) error {
 	lis, err := net.Listen(s.network, s.address)
 	if err != nil {
@@ -92,7 +92,7 @@ func (s *Server) Start(ctx context.Context) error {
 	return nil
 }
 
-// Stop stop server
+// Stop server
 func (s *Server) Stop(ctx context.Context) error {
 	log.Printf("[HTTP] server is stopping")
 	return s.Shutdown(ctx)
