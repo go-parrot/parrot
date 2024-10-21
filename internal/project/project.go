@@ -31,7 +31,7 @@ func init() {
 	}
 
 	// default http, only include http server
-	branch = "http"
+	branch = "master"
 	// default timeout
 	timeout = "60s"
 
