@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/glebarez/sqlite"
 	"gorm.io/driver/clickhouse"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
@@ -25,6 +26,8 @@ const (
 	DriverPostgres = "postgres"
 	// DriverClickhouse
 	DriverClickhouse = "clickhouse"
+	// DriverSqlite sqlite driver
+	DriverSqlite = "sqlite"
 
 	// DefaultDatabase default db name
 	DefaultDatabase = "default"
@@ -39,20 +42,20 @@ var (
 
 // Config database config
 type Config struct {
-	Driver          string
-	Name            string
-	Addr            string
-	UserName        string
-	Password        string
-	ShowLog         bool
-	MaxIdleConn     int
-	MaxOpenConn     int
-	Timeout         string // connect timeout
-	ReadTimeout     string
-	WriteTimeout    string
-	ConnMaxLifeTime time.Duration
-	SlowThreshold   time.Duration // 慢查询时长，默认500ms
-	EnableTrace     bool
+	Driver          string        `yaml:"driver"`
+	Name            string        `yaml:"name"`
+	Addr            string        `yaml:"addr"`
+	UserName        string        `yaml:"user"`
+	Password        string        `yaml:"password"`
+	ShowLog         bool          `yaml:"showlog"`
+	MaxIdleConn     int           `yaml:"maxIdleConn"`
+	MaxOpenConn     int           `yaml:"maxOpenConn"`
+	Timeout         string        `yaml:"timeout"` // connect timeout
+	ReadTimeout     string        `yaml:"readTimeout"`
+	WriteTimeout    string        `yaml:"writeTimeout"`
+	ConnMaxLifeTime time.Duration `yaml:"connMaxLifeTime"`
+	SlowThreshold   time.Duration `yaml:"slowThreshold"` // 慢查询时长，默认500ms
+	EnableTrace     bool          `yaml:"enableTrace"`
 }
 
 // New create a or multi database client
@@ -143,6 +146,10 @@ func NewInstance(c *Config) (db *gorm.DB) {
 		db, err = gorm.Open(postgres.Open(dsn), gormConfig(c))
 	case DriverClickhouse:
 		db, err = gorm.Open(clickhouse.Open(dsn), gormConfig(c))
+	case DriverSqlite, "sqlite3":
+		db, err = gorm.Open(sqlite.Open(dsn), gormConfig(c))
+	case "":
+		db, err = gorm.Open(sqlite.Open("parrot.db"), gormConfig(c))
 	default:
 		db, err = gorm.Open(mysql.Open(dsn), gormConfig(c))
 	}
@@ -176,15 +183,20 @@ func NewInstance(c *Config) (db *gorm.DB) {
 
 // LoadConf load database config
 func LoadConf(name string) (ret *Config, err error) {
-	v, err := config.LoadWithType("database", "yaml")
+	v, err := config.LoadWithType("config", "yaml")
 	if err != nil {
 		return nil, err
 	}
 
-	var c Config
-	err = v.UnmarshalKey(name, &c)
+	var dbConfigs map[string]Config
+	err = v.UnmarshalKey("db", &dbConfigs)
 	if err != nil {
 		return nil, err
+	}
+
+	c, ok := dbConfigs[name]
+	if !ok {
+		return nil, fmt.Errorf("database config not found for name: %s", name)
 	}
 
 	return &c, nil
@@ -202,6 +214,10 @@ func getDSN(c *Config) string {
 		c.ReadTimeout,
 		c.WriteTimeout,
 	)
+
+	if c.Driver == DriverSqlite || c.Driver == "sqlite3" {
+		dsn = fmt.Sprintf("%s", c.Addr)
+	}
 
 	if c.Driver == DriverPostgres {
 		dsn = fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable&connect_timeout=%s&statement_timeout=%s",
